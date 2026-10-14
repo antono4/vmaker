@@ -13,6 +13,13 @@ prompt format H3 actually expects instead of hoping a generic prompt will do.
 Everything runs behind one FastAPI app with a browser UI, a prompt composer that
 follows the official H3-Context-IR guide, and three interchangeable backends.
 
+## Landing page
+
+`index.html` at the repo root is a static overview page. It is separate from the
+app UI, which lives at `app/static/index.html` and is served by FastAPI at `/`.
+Open the landing page directly in a browser, or enable GitHub Pages on `main`
+with the root folder selected.
+
 ## Quick start
 
 ```bash

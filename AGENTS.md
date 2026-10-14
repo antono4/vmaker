@@ -108,6 +108,15 @@ does **not** exist on Hugging Face -- `GET /api/models/MiniMaxAI/MiniMax-H3-Turb
 returns 401 while `MiniMaxAI/MiniMax-H3` returns 200. The UI exposes it as a
 label only and never downloads it. Do not add a download step for it.
 
+## Two index.html files, do not confuse them
+
+- `index.html` (repo root) — static landing page for GitHub Pages. Self-contained:
+  inline CSS, no JS, no build step, no dependency on the app.
+- `app/static/index.html` — the actual studio UI, served by FastAPI at `/`.
+
+The landing page reuses the palette from `app/static/styles.css` but duplicates
+the tokens, since it must stand alone.
+
 ## Remote
 
 Pushed to `https://github.com/antono4/vmaker` (public, default branch `main`).
