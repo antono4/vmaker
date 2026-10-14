@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MiniMax H3 Video Maker</title>
+<meta name="description" content="Text, image and reference driven video generation with MiniMax-H3, including native stereo audio." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"><span></span></div>
+    <div>
+      <h1>MiniMax H3 Video Maker</h1>
+      <p class="tagline">Omni-modal video + stereo audio studio</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <div class="pill" id="health-pill" title="Server health">
+      <i class="dot"></i><span id="health-text">connecting</span>
+    </div>
+    <button class="btn ghost" id="btn-refresh" title="Reload jobs">Refresh</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ================= COMPOSER ================= -->
+  <section class="panel composer">
+    <div class="panel-head">
+      <h2>1 &middot; Compose</h2>
+      <span class="hint">H3-Context-IR prompt builder</span>
+    </div>
+
+    <div class="modes" id="mode-tabs" role="tablist"></div>
+    <p class="mode-note" id="mode-note"></p>
+
+    <details class="block" open>
+      <summary>Scene</summary>
+      <div class="grid two">
+        <label class="field">
+          <span>Style</span>
+          <input id="f-style" placeholder="realistic photographic, cinematic, 35mm film" />
+        </label>
+        <label class="field">
+          <span>Setting</span>
+          <input id="f-setting" placeholder="a rain soaked Tokyo alley at night" />
+        </label>
+        <label class="field">
+          <span>Lighting</span>
+          <input id="f-lighting" placeholder="warm golden hour backlight, soft shadows" />
+        </label>
+        <label class="field">
+          <span>Subject</span>
+          <input id="f-subject" placeholder="a lone cyclist in a yellow raincoat" />
+        </label>
+        <label class="field wide">
+          <span>Action</span>
+          <input id="f-action" placeholder="pedals slowly toward the camera, splashing through puddles" />
+        </label>
+      </div>
+    </details>
+
+    <details class="block" open>
+      <summary>Shots <em id="shot-count">1</em></summary>
+      <div id="shots"></div>
+      <button class="btn dashed" id="btn-add-shot">+ Add shot</button>
+    </details>
+
+    <details class="block" open>
+      <summary>References <em id="ref-count">0</em></summary>
+      <p class="limits" id="ref-limits"></p>
+      <div id="refs"></div>
+      <button class="btn dashed" id="btn-add-ref">+ Add reference</button>
+    </details>
+
+    <details class="block">
+      <summary>Audio &amp; negative</summary>
+      <div class="grid one">
+        <label class="field">
+          <span>overall_soundscape</span>
+          <textarea id="f-soundscape" rows="3"
+            placeholder="A low ambient hum, tyres hissing over wet asphalt, a distant tram bell, water dripping from an awning."></textarea>
+        </label>
+        <label class="field">
+          <span>non_diegetic_music</span>
+          <textarea id="f-music" rows="3"
+            placeholder="A sparse solo piano motif over warm sustained strings, slow tempo, resolving softly."></textarea>
+        </label>
+        <label class="field">
+          <span>Negative prompt <small>sent when the backend supports it</small></span>
+          <textarea id="f-negative" rows="2" placeholder="blurry, distorted hands, text artifacts, flicker"></textarea>
+        </label>
+        <label class="field">
+          <span>Dialogue language tag</span>
+          <select id="f-language">
+            <option>English</option><option>Chinese</option><option>Japanese</option>
+            <option>Korean</option><option>Spanish</option><option>French</option>
+            <option>German</option><option>Italian</option><option>Portuguese</option>
+            <option>Russian</option><option>Arabic</option>
+          </select>
+        </label>
+      </div>
+    </details>
+
+    <details class="block">
+      <summary>Raw prompt override</summary>
+      <p class="limits">
+        Paste a ready-made Context-IR prompt to bypass the composer. Leave empty
+        to send the generated prompt.
+      </p>
+      <textarea id="f-raw" rows="5" class="mono"
+        placeholder="integrated_multimodal_description: [Shot 1] ..."></textarea>
+      <div class="row-end">
+        <button class="btn ghost" id="btn-expand">Expand with H3-Context-IR API</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- ================= SETTINGS + OUTPUT ================= -->
+  <section class="panel settings">
+    <div class="panel-head">
+      <h2>2 &middot; Render</h2>
+      <span class="hint">backend, duration, resolution</span>
+    </div>
+
+    <div id="backends" class="backends"></div>
+
+    <div class="grid two">
+      <label class="field">
+        <span>Duration <output id="out-duration">10s</output></span>
+        <input type="range" id="f-duration" min="4" max="15" step="0.5" value="10" />
+      </label>
+      <label class="field">
+        <span>Aspect ratio</span>
+        <select id="f-aspect"></select>
+      </label>
+      <label class="field">
+        <span>Resolution</span>
+        <select id="f-resolution">
+          <option value="768p">768p (H3-Base)</option>
+          <option value="2k">2K (H3-Regenerate-2K / API)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Seed</span>
+        <input type="number" id="f-seed" value="0" min="0" />
+      </label>
+      <label class="field">
+        <span>Inference steps <small>optional</small></span>
+        <input type="number" id="f-steps" value="0" min="0" max="200"
+               placeholder="0 = server default" />
+      </label>
+      <label class="field">
+        <span>Turbo LoRA <small>local backend only</small></span>
+        <input id="f-turbo" placeholder="MiniMax-H3-Turbo-Lora" disabled
+               title="Turbo LoRA is loaded by the H3 server, not by this app." />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary big" id="btn-generate">Generate video</button>
+      <button class="btn ghost" id="btn-copy">Copy prompt</button>
+    </div>
+
+    <div class="prompt-box">
+      <div class="prompt-head">
+        <span>Composed prompt</span>
+        <span id="prompt-chars" class="mono">0 chars</span>
+      </div>
+      <pre id="prompt-preview" class="mono">Fill in the composer to see the prompt.</pre>
+      <ul id="prompt-problems" class="problems"></ul>
+    </div>
+
+    <div class="panel-head sub">
+      <h2>3 &middot; Output</h2>
+      <span class="hint" id="output-hint">nothing rendered yet</span>
+    </div>
+
+    <div id="player" class="player empty">
+      <div class="player-empty">Your render appears here.</div>
+    </div>
+
+    <div class="panel-head sub">
+      <h2>4 &middot; Library</h2>
+      <span class="hint"><span id="job-count">0</span> jobs</span>
+    </div>
+    <div id="gallery" class="gallery"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>
+    Model weights: <a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noreferrer">MiniMaxAI/MiniMax-H3</a>
+    &middot; <a href="https://github.com/minimaxh3turbo/MiniMax-H3-Turbo-LoRA-ComfyUI" target="_blank" rel="noreferrer">source repo</a>
+    &middot; <a href="/docs" target="_blank" rel="noreferrer">API docs</a>
+  </span>
+  <span id="foot-note"></span>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

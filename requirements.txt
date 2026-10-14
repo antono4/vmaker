@@ -1,0 +1,25 @@
+# Web app
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+httpx>=0.27
+
+# Media
+pillow>=10.0
+numpy>=1.26
+imageio>=2.34
+imageio-ffmpeg>=0.5
+
+# --- Optional: only needed for the local H3 server -------------------------
+# The 33B model needs a CUDA GPU (~24 GB VRAM for 768p, or several GPUs with
+# --ulysses-degree sharding). Uncomment one serving stack and install torch
+# matching your CUDA version.
+#
+# sglang[all]>=0.4
+# vllm>=0.8
+# torch>=2.4
+# diffusers>=0.36          # provides MiniMaxH3ModularPipeline
+# transformers>=4.53       # provides Qwen3VLForConditionalGeneration
+# accelerate
+# safetensors
+# huggingface_hub[cli]     # for tools/download_model.sh

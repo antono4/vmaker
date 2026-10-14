@@ -1,0 +1,9 @@
+data/outputs/*
+data/uploads/*
+data/jobs.json
+models/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
