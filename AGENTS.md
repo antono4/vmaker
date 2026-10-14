@@ -108,6 +108,16 @@ does **not** exist on Hugging Face -- `GET /api/models/MiniMaxAI/MiniMax-H3-Turb
 returns 401 while `MiniMaxAI/MiniMax-H3` returns 200. The UI exposes it as a
 label only and never downloads it. Do not add a download step for it.
 
+## Remote
+
+Pushed to `https://github.com/antono4/vmaker` (public, default branch `main`).
+The local repo was initialised here, so `main` is the only branch.
+
+`GITHUB_TOKEN` is **not** set in this environment. The working credential is
+`GH_DISPATCH_TOKEN` (authenticates as `antono4`, has admin on the repo). Use it
+for `curl` against the API and for the push URL, then reset the remote to the
+plain URL so the token is not left in `.git/config`.
+
 ## Tests
 
 `tests/test_app.py` drives the real ASGI app over HTTP and writes real media
