@@ -117,6 +117,11 @@ label only and never downloads it. Do not add a download step for it.
 The landing page reuses the palette from `app/static/styles.css` but duplicates
 the tokens, since it must stand alone.
 
+GitHub Pages is enabled on `main`, root folder. The live page is
+`https://antono4.github.io/vmaker/`, and it is also set as the repo homepage.
+Pages uses the legacy builder, so a push to `main` republishes it; check
+`GET /repos/antono4/vmaker/pages/builds/latest` for the build status.
+
 ## Remote
 
 Pushed to `https://github.com/antono4/vmaker` (public, default branch `main`).
