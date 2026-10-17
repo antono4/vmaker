@@ -19,6 +19,7 @@ import pytest
 os.environ.setdefault("H3_DATA_DIR", tempfile.mkdtemp(prefix="h3test-"))
 
 from app import media, modes  # noqa: E402
+from app import config  # noqa: E402
 from app import prompt as prompt_lib  # noqa: E402
 from app.prompt import PromptSpec, Reference, Shot  # noqa: E402
 
@@ -598,3 +599,81 @@ def test_index_page_serves_the_studio(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "MiniMax H3 Video Maker" in response.text
+
+
+# ------------------------------------------------------------- runtime key
+def test_api_backend_advertises_that_it_accepts_a_key(client):
+    backends = {b["name"]: b for b in client.get("/api/backends").json()["backends"]}
+    assert backends["api"]["accepts_key"] is True
+    assert backends["api"]["key_source"] == ""
+    # the other backends do not take a key, so the UI must not render the form
+    assert backends["demo"].get("accepts_key") is None
+    assert backends["local"].get("accepts_key") is None
+
+
+def test_setting_a_key_marks_the_api_backend_ready(client):
+    response = client.post("/api/backends/api/key", json={"api_key": "sk-test-abc"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["available"] is True
+    assert body["backend"]["key_source"] == "session"
+    assert "sk-test-abc" not in response.text
+
+    backends = {b["name"]: b for b in client.get("/api/backends").json()["backends"]}
+    assert backends["api"]["available"] is True
+    assert backends["api"]["key_source"] == "session"
+
+
+def test_key_is_not_written_to_disk(client):
+    client.post("/api/backends/api/key", json={"api_key": "sk-should-not-persist"})
+    hits = [
+        path for path in (config.DATA_DIR, config.OUTPUT_DIR, config.UPLOAD_DIR)
+        if path.exists() and any(
+            "sk-should-not-persist" in f.read_text(errors="replace")
+            for f in path.rglob("*") if f.is_file()
+        )
+    ]
+    assert hits == []
+
+
+def test_custom_api_base_is_used_and_validated(client):
+    ok = client.post("/api/backends/api/key", json={
+        "api_key": "sk-test", "api_base": "https://api.minimaxi.com",
+    })
+    assert ok.status_code == 200
+    endpoints = ok.json()["backend"]["endpoints"]
+    assert endpoints["video_generation"] == "https://api.minimaxi.com/v2/video_generation"
+
+    bad = client.post("/api/backends/api/key", json={"api_base": "ftp://nope"})
+    assert bad.status_code == 400
+    assert "http://" in bad.json()["detail"]
+
+
+def test_empty_key_payload_is_rejected(client):
+    response = client.post("/api/backends/api/key", json={})
+    assert response.status_code == 400
+
+
+def test_clearing_the_key_makes_the_backend_unavailable_again(client):
+    client.post("/api/backends/api/key", json={"api_key": "sk-test"})
+    cleared = client.delete("/api/backends/api/key")
+    assert cleared.status_code == 200
+    assert cleared.json()["available"] is False
+    backends = {b["name"]: b for b in client.get("/api/backends").json()["backends"]}
+    assert backends["api"]["available"] is False
+    assert backends["api"]["key_source"] == ""
+
+
+def test_environment_key_still_wins_when_no_session_key_is_set(client, monkeypatch):
+    from app.adapters import get
+
+    monkeypatch.setattr(config, "MINIMAX_API_KEY", "sk-from-env")
+    backend = get("api")
+    assert backend.key_source == "environment"
+    assert backend.api_key == "sk-from-env"
+    # a pasted key overrides the environment for the rest of the process
+    backend.set_key("sk-from-ui")
+    assert backend.key_source == "session"
+    assert backend.api_key == "sk-from-ui"
+    backend.clear_key()
+    assert backend.api_key == "sk-from-env"

@@ -162,21 +162,85 @@ function renderAspectOptions() {
 
 function renderBackends() {
   const host = $('#backends');
-  host.innerHTML = state.backends.map((b) => `
-    <label class="backend ${b.name === state.backend ? 'active' : ''} ${b.available ? '' : 'unavailable'}">
-      <input type="radio" name="backend" value="${b.name}" ${b.name === state.backend ? 'checked' : ''} />
-      <div class="b-body">
-        <div class="b-top">
-          <strong>${esc(b.label)}</strong>
-          <span class="tag ${b.available ? 'ok' : 'bad'}">${b.available ? 'ready' : 'not ready'}</span>
+  host.innerHTML = state.backends.map((b) => {
+    const keyForm = b.accepts_key ? `
+      <div class="key-form">
+        <div class="key-row">
+          <input type="password" class="key-input" data-key-for="${b.name}"
+                 placeholder="Paste MiniMax API key (sk-...)" autocomplete="off"
+                 value="" />
+          <button class="btn tiny" data-key-save="${b.name}">Save key</button>
+          ${b.key_source === 'session' ? `<button class="btn tiny ghost" data-key-clear="${b.name}">Forget</button>` : ''}
         </div>
-        <p>${esc(b.reason || b.description)}</p>
-      </div>
-    </label>`).join('');
+        <input class="key-input base-input" data-base-for="${b.name}"
+               placeholder="https://api.minimax.io (global) or https://api.minimaxi.com"
+               value="" autocomplete="off" />
+        <p class="key-note">${b.key_source === 'environment'
+          ? 'A key is already set from the environment. A pasted key overrides it for this session only.'
+          : 'Held in memory for this session only. Never written to disk.'}</p>
+      </div>` : '';
+    return `
+    <div class="backend ${b.name === state.backend ? 'active' : ''} ${b.available ? '' : 'unavailable'}">
+      <label class="b-pick">
+        <input type="radio" name="backend" value="${b.name}" ${b.name === state.backend ? 'checked' : ''} />
+        <div class="b-body">
+          <div class="b-top">
+            <strong>${esc(b.label)}</strong>
+            <span class="tag ${b.available ? 'ok' : 'bad'}">${b.available ? 'ready' : 'not ready'}</span>
+          </div>
+          <p>${esc(b.reason || b.description)}</p>
+        </div>
+      </label>
+      ${keyForm}
+    </div>`;
+  }).join('');
   $$('input[name=backend]', host).forEach((input) => {
     input.onchange = () => {
       state.backend = input.value;
       renderBackends();
+    };
+  });
+  $$('[data-key-save]', host).forEach((btn) => {
+    btn.onclick = async (event) => {
+      event.preventDefault();
+      const name = btn.dataset.keySave;
+      const key = $(`[data-key-for="${name}"]`, host).value.trim();
+      const base = $(`[data-base-for="${name}"]`, host).value.trim();
+      if (!key && !base) {
+        toast('Enter an API key first.', 'error');
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const body = await api(`/api/backends/${name}/key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key, api_base: base }),
+        });
+        state.backends = state.backends.map((b) => (b.name === name ? body.backend : b));
+        if (body.available && !state.backends.find((b) => b.name === state.backend && b.available)) {
+          state.backend = name;
+        }
+        renderBackends();
+        toast(body.available ? 'API key saved for this session.' : body.reason, body.available ? 'ok' : 'error');
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+      }
+    };
+  });
+  $$('[data-key-clear]', host).forEach((btn) => {
+    btn.onclick = async (event) => {
+      event.preventDefault();
+      const name = btn.dataset.keyClear;
+      try {
+        const body = await api(`/api/backends/${name}/key`, { method: 'DELETE' });
+        state.backends = state.backends.map((b) => (b.name === name ? body.backend : b));
+        renderBackends();
+        toast('API key cleared.', 'ok');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
     };
   });
 }
