@@ -94,6 +94,35 @@ async def api_backends() -> dict:
     return {"default": config.DEFAULT_BACKEND, "backends": [b.info() for b in all_backends()]}
 
 
+@app.post("/api/backends/api/key")
+async def api_set_key(payload: dict) -> dict:
+    """Store a MiniMax API key for this process only (never persisted).
+
+    The key is held in memory by the adapter and is deliberately not echoed
+    back; the response reports only whether a key is now usable.
+    """
+    key = str(payload.get("api_key", "")).strip()
+    base = str(payload.get("api_base", "")).strip()
+    if not key and not base:
+        raise HTTPException(status_code=400, detail="Provide an api_key or api_base.")
+    if base and not base.startswith(("http://", "https://")):
+        raise HTTPException(
+            status_code=400,
+            detail="api_base must start with http:// or https://",
+        )
+    backend = get_backend("api")
+    backend.set_key(key, base)
+    ok, reason = backend.available()
+    return {"backend": backend.info(), "available": ok, "reason": reason}
+
+
+@app.delete("/api/backends/api/key")
+async def api_clear_key() -> dict:
+    backend = get_backend("api")
+    backend.clear_key()
+    return {"backend": backend.info(), "available": False}
+
+
 @app.get("/api/modes")
 async def api_modes() -> dict:
     return {

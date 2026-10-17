@@ -74,6 +74,15 @@ H3-Context-IR API**, which rewrites a short idea into a full prompt, and
 **Regenerate to 2K**, which upscales a finished 768p clip. Local files cannot
 be uploaded to this API, so reference inputs must already be public URLs.
 
+You do not have to set the key before starting. The API card in the UI has a
+**Paste MiniMax API key** field: save a key there and the backend turns ready
+without a restart. The key is held in memory for that session only -- it is
+never written to disk and never echoed back by the API. Use **Forget** to drop
+it. A key typed in the UI overrides `MINIMAX_API_KEY` from the environment; when
+neither is set the card explains what is missing. The same field accepts a
+custom API base, so you can switch between `api.minimax.io` (global) and
+`api.minimaxi.com` (CN) without editing the environment.
+
 ### 3. Demo backend -- no GPU, no key
 
 Renders a watermarked placeholder on the CPU so you can verify the studio end to
@@ -156,7 +165,7 @@ player), and **Library** (past renders, newest first).
 | `H3_LOCAL_BASE_URL` | `http://127.0.0.1:30010` | fl2va server |
 | `H3_LOCAL_BASE_URL_REF` | `http://127.0.0.1:30011` | ref2va server |
 | `MINIMAX_API_BASE` | `https://api.minimax.io` | hosted API root |
-| `MINIMAX_API_KEY` | -- | enables the API backend |
+| `MINIMAX_API_KEY` | -- | enables the API backend (a key pasted in the UI works too) |
 | `H3_MAX_UPLOAD_MB` | `64` | per-file upload cap |
 | `H3_READ_TIMEOUT` | `600` | seconds to wait for a render |
 
@@ -168,6 +177,8 @@ Interactive docs are at `/docs` when the app is running.
 | --- | --- | --- |
 | `GET` | `/healthz` | liveness, encoder status, job count |
 | `GET` | `/api/backends` | available backends and why each is or is not usable |
+| `POST` | `/api/backends/api/key` | set a MiniMax API key for this session (in memory only) |
+| `DELETE` | `/api/backends/api/key` | forget the session key |
 | `GET` | `/api/modes` | modes, limits, shot sizes, camera moves, retention policies |
 | `POST` | `/api/prompt/preview` | compose a prompt and validate it, without rendering |
 | `POST` | `/api/prompt/expand` | rewrite a short idea (needs `MINIMAX_API_KEY`) |
