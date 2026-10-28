@@ -41,12 +41,35 @@ class MiniMaxAPIBackend:
 
     def __init__(self) -> None:
         self.base_url = config.MINIMAX_API_BASE.rstrip("/")
-        self.api_key = config.MINIMAX_API_KEY
+        # A key typed into the UI lives only here, in memory. It is never
+        # written to disk or returned by the API; a restart falls back to
+        # MINIMAX_API_KEY from the environment.
+        self._runtime_key = ""
+
+    @property
+    def api_key(self) -> str:
+        return self._runtime_key or config.MINIMAX_API_KEY
+
+    @property
+    def key_source(self) -> str:
+        if self._runtime_key:
+            return "session"
+        if config.MINIMAX_API_KEY:
+            return "environment"
+        return ""
+
+    def set_key(self, key: str, base: str = "") -> None:
+        self._runtime_key = (key or "").strip()
+        if base.strip():
+            self.base_url = base.strip().rstrip("/")
+
+    def clear_key(self) -> None:
+        self._runtime_key = ""
 
     def available(self) -> tuple[bool, str]:
         if not self.api_key:
-            return False, "MINIMAX_API_KEY is not set."
-        return True, f"Key configured, endpoint {self.base_url}."
+            return False, "No API key. Paste one below, or set MINIMAX_API_KEY."
+        return True, f"Key from {self.key_source}, endpoint {self.base_url}."
 
     def info(self) -> dict:
         ok, reason = self.available()
@@ -56,6 +79,8 @@ class MiniMaxAPIBackend:
             "description": self.description,
             "available": ok,
             "reason": reason,
+            "key_source": self.key_source,
+            "accepts_key": True,
             "endpoints": {
                 "video_generation": f"{self.base_url}/v2/video_generation",
                 "video_regeneration": f"{self.base_url}/v2/video_regeneration",
